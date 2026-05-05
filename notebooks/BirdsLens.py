@@ -70,3 +70,44 @@ else:
             print(f"{tgz_name} done")
 
 print(f"\nCUB_DIR = {CUB_DIR}")
+
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+
+df_images = pd.read_csv(f"{CUB_DIR}/images.txt",
+                        sep=' ', header=None, names=['id', 'relpath'])
+df_labels = pd.read_csv(f"{CUB_DIR}/image_class_labels.txt",
+                        sep=' ', header=None, names=['id', 'label'])
+df_split  = pd.read_csv(f"{CUB_DIR}/train_test_split.txt",
+                        sep=' ', header=None, names=['id', 'is_train'])
+
+df = df_images.merge(df_labels, on='id').merge(df_split, on='id')
+df['filepath'] = df['relpath'].apply(lambda p: f"{CUB_DIR}/images/{p}")
+df['label']    = df['label'] - 1
+
+class_names = []
+with open(f"{CUB_DIR}/classes.txt") as f:
+    for line in f:
+        parts = line.strip().split()
+        if len(parts) >= 2:
+            class_names.append(parts[1])
+num_classes = len(class_names)
+
+train_df, temp_df = train_test_split(
+    df, test_size=0.20, random_state=42, stratify=df['label'])
+val_df, test_df = train_test_split(
+    temp_df, test_size=0.50, random_state=42, stratify=temp_df['label'])
+
+train_df = train_df.sample(frac=1, random_state=42).reset_index(drop=True)
+val_df   = val_df.sample(frac=1,   random_state=42).reset_index(drop=True)
+test_df  = test_df.sample(frac=1,  random_state=42).reset_index(drop=True)
+
+print("=" * 45)
+print(f"Total   : {len(df)}")
+print(f"Train   : {len(train_df)} (80%)")
+print(f"Val     : {len(val_df)} (10%)")
+print(f"Test    : {len(test_df)} (10%)")
+print(f"Classes : {num_classes}")
+print("=" * 45)
+
